@@ -356,6 +356,25 @@ def test_completion_rejects_token_id_prompts():
     assert "token-id prompt" in body["error"]["message"]
 
 
+def test_completion_rejects_n_other_than_one():
+    state = FakeState([])
+    for n, stream in ((2, False), (3, True)):
+        response = run(
+            handle_completion(
+                CompletionRequest(model="client-model", prompt="say hi", n=n, stream=stream),
+                request=None,
+                state=state,
+                model_sampling={},
+            )
+        )
+
+        assert response.status_code == 400
+        body = json.loads(response.body)
+        assert body["error"]["param"] == "n"
+        assert body["error"]["message"] == "Only n=1 is supported"
+    assert state.sent is None
+
+
 def test_completion_accepts_text_prompt():
     state = FakeState(
         [UserReply(uid=42, incremental_output="hello", finished=True, prompt_tokens_delta=2, completion_tokens_delta=1)]
